@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { TaskInput } from './components/TaskInput';
-import { TaskList } from './components/TaskList';
-import { Brain } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { TaskInput } from "./components/TaskInput";
+import { TaskList } from "./components/TaskList";
+import { Brain } from "lucide-react";
 
 interface Reminder {
   type: string;
@@ -16,63 +16,51 @@ interface Task {
   reminder?: Reminder;
 }
 
-// Sample data to demonstrate the UI structure
-const sampleTasks: Task[] = [
-  {
-    id: '1',
-    heading: 'Call Mom',
-    task: 'Call and catch up with mom',
-    subtasks: [],
-    reminder: {
-      type: 'weekly',
-      time: 'Sunday at 9:00 AM'
-    }
-  },
-  {
-    id: '2',
-    heading: 'Project Planning',
-    task: 'Plan the quarterly project roadmap and deliverables',
-    subtasks: [
-      'Review last quarter\'s performance',
-      'Set new goals and milestones',
-      'Schedule team meeting',
-      'Prepare presentation slides'
-    ],
-    reminder: {
-      type: 'one-time',
-      time: 'Tomorrow at 2:00 PM'
-    }
-  },
-  {
-    id: '3',
-    heading: 'Grocery Shopping',
-    task: 'Buy groceries for the week',
-    subtasks: [
-      'Milk and eggs',
-      'Fresh vegetables',
-      'Bread and pasta'
-    ]
-  }
-];
-
 function App() {
-  const [tasks, setTasks] = useState<Task[]>(sampleTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleTaskSubmit = (input: string) => {
-    // TODO: In the future, this will send the input to an AI backend
-    // For now, we'll just create a simple task placeholder
-    const newTask: Task = {
-      id: Date.now().toString(),
-      heading: 'New Task',
-      task: input,
-      subtasks: []
-    };
-    
-    setTasks(prev => [newTask, ...prev]);
+  // ✅ Fetch tasks on page load
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/`);
+      const data = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.error("Failed to fetch tasks:", err);
+    }
   };
 
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  // ✅ Handle new prompt submission
+  const handleTaskSubmit = async (input: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/parse-task`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: input }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        await fetchTasks(); // 🔄 Refresh tasks after update
+      } else {
+        console.error("Backend did not succeed:", data);
+      }
+    } catch (err) {
+      console.error("Failed to submit task:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Optional local-only delete (backend delete endpoint is separate)
   const handleDeleteTask = (id: string) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
+    setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
   return (
@@ -85,12 +73,20 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-900">Smart Tasks</h1>
           </div>
           <p className="text-gray-600">
-            AI-powered task organizer. Just describe what you need to do in natural language.
+            AI-powered task organizer. Just describe what you need to do in
+            natural language.
           </p>
         </div>
 
-        {/* Task Input */}
+        {/* Input */}
         <TaskInput onSubmit={handleTaskSubmit} />
+
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="text-center text-sm text-gray-500">
+            Processing task with AI...
+          </div>
+        )}
 
         {/* Task List */}
         <TaskList tasks={tasks} onDeleteTask={handleDeleteTask} />
