@@ -16,9 +16,12 @@ interface Task {
   reminder?: Reminder;
 }
 
+type FilterType = "all" | "weekly" | "once";
+
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<FilterType>("all");
 
   // ✅ Fetch tasks on page load
   const fetchTasks = async () => {
@@ -58,18 +61,19 @@ function App() {
     }
   };
 
-  // Optional local-only delete (backend delete endpoint is separate)
   const handleDeleteTask = (id: string) => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
-  const handleReorder = (updated: Task[]) => {
-    setTasks(updated);
-  };
+  // ✅ Filter tasks by reminder type
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === "all") return true;
+    return task.reminder?.type === filter;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-3">
@@ -85,18 +89,38 @@ function App() {
         {/* Input */}
         <TaskInput onSubmit={handleTaskSubmit} />
 
-        {/* Loading Spinner */}
+        {/* Filter Buttons */}
+        <div className="flex justify-center gap-3 mb-6">
+          {["all", "weekly", "once"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f as FilterType)}
+              className={`px-4 py-1 rounded-full text-sm font-medium border transition-colors
+                ${
+                  filter === f
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                }`}
+            >
+              {f === "all"
+                ? "All Tasks"
+                : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Loading */}
         {loading && (
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-gray-500 mb-4">
             Processing task with AI...
           </div>
         )}
 
         {/* Task List */}
         <TaskList
-          tasks={tasks}
+          tasks={filteredTasks}
+          onReorder={setTasks}
           onDeleteTask={handleDeleteTask}
-          onReorder={handleReorder}
         />
       </div>
     </div>
