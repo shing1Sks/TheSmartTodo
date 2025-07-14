@@ -63,6 +63,10 @@ function App() {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
+  const handleReorder = (updated: Task[]) => {
+    setTasks(updated);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
@@ -89,7 +93,11 @@ function App() {
         )}
 
         {/* Task List */}
-        <TaskList tasks={tasks} onDeleteTask={handleDeleteTask} />
+        <TaskList
+          tasks={tasks}
+          onDeleteTask={handleDeleteTask}
+          onReorder={handleReorder}
+        />
       </div>
     </div>
   );

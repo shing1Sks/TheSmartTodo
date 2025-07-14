@@ -1,5 +1,20 @@
-import React from 'react';
-import { TaskCard } from './TaskCard';
+import React from "react";
+import { TaskCard } from "./TaskCard";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableTask } from "./SortableTask.tsx";
 
 interface Reminder {
   type: string;
@@ -17,32 +32,49 @@ interface Task {
 interface TaskListProps {
   tasks: Task[];
   onDeleteTask: (id: string) => void;
+  onReorder: (updated: Task[]) => void;
 }
 
-export function TaskList({ tasks, onDeleteTask }: TaskListProps) {
+export function TaskList({ tasks, onDeleteTask, onReorder }: TaskListProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      const newIndex = tasks.findIndex((t) => t.id === over.id);
+      const updated = arrayMove(tasks, oldIndex, newIndex);
+      onReorder(updated);
+    }
+  };
+
   if (tasks.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-gray-400 mb-2">
-          <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </div>
-        <p className="text-gray-500 text-lg">No tasks yet</p>
-        <p className="text-gray-400 text-sm mt-1">Add your first task using natural language above</p>
-      </div>
-    );
+    return <div className="text-center py-12 text-gray-500">No tasks yet</div>;
   }
 
   return (
-    <div className="space-y-3">
-      {tasks.map((task) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          onDelete={onDeleteTask}
-        />
-      ))}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-3">
+          {tasks.map((task) => (
+            <SortableTask key={task.id} id={task.id}>
+              <TaskCard task={task} onDelete={onDeleteTask} />
+            </SortableTask>
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
