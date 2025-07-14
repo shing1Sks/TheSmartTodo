@@ -62,7 +62,8 @@ export function TaskCard({ task, onDelete }: Props) {
           className="mt-3 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full
                   bg-blue-50 text-blue-700 border border-blue-200 w-fit"
         >
-          ⏰ {task.reminder.type.toUpperCase()} — {task.reminder.time}
+          ⏰ {task.reminder.type.toUpperCase()} —{" "}
+          {task.reminder.time || "Any Day"}
         </div>
       )}
     </div>
